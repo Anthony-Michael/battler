@@ -140,7 +140,15 @@ public class BarcodeScanner : MonoBehaviour
 
         try
         {
-            var result = barcodeReader.Decode(pixels, webCamTexture.width, webCamTexture.height);
+            // Convert Color32[] to byte[] luminance for ZXing
+            byte[] luminance = new byte[pixels.Length];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                // Calculate luminance from RGB values
+                luminance[i] = (byte)((pixels[i].r * 0.299f + pixels[i].g * 0.587f + pixels[i].b * 0.114f) / 3);
+            }
+
+            var result = barcodeReader.Decode(luminance, webCamTexture.width, webCamTexture.height);
             return result?.Text;
         }
         catch (Exception e)
