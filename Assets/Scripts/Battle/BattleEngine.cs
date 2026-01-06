@@ -37,26 +37,15 @@ public class BattleParticipant
 
 public class BattleResult
 {
-    public BattleParticipant winner;
-    public BattleParticipant loser;
-    public int score;
-    public List<string> battleLog;
+    public string winnerBarcode;
+    public string loserBarcode;
+    public string log;
 
-    public BattleResult(BattleParticipant winner, BattleParticipant loser, List<string> battleLog)
+    public BattleResult(string winnerBarcode, string loserBarcode, string log)
     {
-        this.winner = winner;
-        this.loser = loser;
-        this.score = CalculateScore(winner, loser);
-        this.battleLog = battleLog;
-    }
-
-    private int CalculateScore(BattleParticipant winner, BattleParticipant loser)
-    {
-        int baseScore = 100;
-        int hpBonus = Mathf.FloorToInt((float)winner.currentHp / winner.monster.stats.hp * 50);
-        int statBonus = Mathf.FloorToInt((winner.monster.stats.attack + winner.monster.stats.defense) * 0.5f);
-
-        return baseScore + hpBonus + statBonus;
+        this.winnerBarcode = winnerBarcode;
+        this.loserBarcode = loserBarcode;
+        this.log = log;
     }
 }
 
@@ -96,15 +85,27 @@ public static class BattleEngine
 
         battleLog.Add($"Battle ended! {winner.monster.archetype} wins with {winner.currentHp} HP remaining");
 
-        return new BattleResult(winner, loser, battleLog);
+        string battleLogString = FormatBattleLog(battleLog);
+        return new BattleResult(winner.monster.barcode, loser.monster.barcode, battleLogString);
+    }
+
+    private static int CalculateDamage(int attack, int defense)
+    {
+        int baseDamage = attack;
+        int defenseReduction = Mathf.FloorToInt(defense * 0.5f);
+        return Mathf.Max(1, baseDamage - defenseReduction);
+    }
+
+    private static float ApplyVariance(float damage)
+    {
+        return damage * Random.Range(0.8f, 1.2f);
     }
 
     private static void ExecuteAttack(BattleParticipant attacker, BattleParticipant defender, List<string> battleLog)
     {
-        float damageMultiplier = Random.Range(0.8f, 1.2f);
-        int baseDamage = Mathf.FloorToInt(attacker.monster.stats.attack * damageMultiplier);
-        int defenseReduction = Mathf.FloorToInt(defender.monster.stats.defense * 0.5f);
-        int finalDamage = Mathf.Max(1, baseDamage - defenseReduction);
+        int baseDamage = CalculateDamage(attacker.monster.stats.attack, defender.monster.stats.defense);
+        float damageWithVariance = ApplyVariance(baseDamage);
+        int finalDamage = Mathf.FloorToInt(damageWithVariance);
 
         bool isCritical = Random.value < attacker.monster.stats.critRate;
         if (isCritical)
@@ -135,8 +136,8 @@ public static class BattleEngine
 
     public static string GetBattleSummary(BattleResult result)
     {
-        return $"Winner: {result.winner.monster.archetype} (Score: {result.score})\n" +
-               $"Loser: {result.loser.monster.archetype}\n" +
-               $"Winner HP remaining: {result.winner.currentHp}/{result.winner.monster.stats.hp}";
+        return $"Winner: {result.winnerBarcode}\n" +
+               $"Loser: {result.loserBarcode}\n" +
+               $"Battle Log: {result.log}";
     }
 }
